@@ -1,30 +1,47 @@
 from tkinter import *
-from random import  choice, shuffle
+from random import  choice
 import pandas
-from pandas.core.interchange.dataframe_protocol import DataFrame
 
 # ---------------------------- CONSTANTS ------------------------------- #
 BACKGROUND_COLOR = "#B1DDC6"
 
-
 # ------------------------- BUTTON COMMANDS ---------------------------- #
-data = pandas.read_csv("data/franske_ord.csv")
-to_learn = data.to_dict(orient="records")
 current_card = {}
-# print(to_learn)
+to_learn = {}
+
+
+
+try:
+    data = pandas.read_csv("data/franske_ord.csv")
+except FileNotFoundError:
+    original_data = pandas.read_csv("data/franske_ord.csv")
+    to_learn = original_data.to_dict(orient="records")
+else:
+    to_learn = data.to_dict(orient="records")
 
 def next_card():
-    global current_card
+    global current_card, flip_timer
+    window.after_cancel(flip_timer)
     current_card = choice(to_learn)
-    canvas.itemconfig(card_title, text="French")
-    canvas.itemconfig(card_word, text=current_card["French"])
+    canvas.itemconfig(card_title, text="French", fill="black")
+    canvas.itemconfig(card_word, text=current_card["French"], fill="black")
+    canvas.itemconfig(card_background, image=card_front_img)
+    flip_timer = window.after(3000, func=flip_card)
 
+    # Print nøglerne for den valgte record
+    print(current_card.keys())  # For at se om 'Dansk' findes
 
 def flip_card():
     canvas.itemconfig(card_title, text="Dansk", fill="white")
     canvas.itemconfig(card_word, text=current_card["Dansk"], fill="white")
     canvas.itemconfig(card_background, image=card_back_img)
 
+def is_known():
+    to_learn.remove(current_card)
+    print(len(to_learn))
+    data = pandas.DataFrame(to_learn)
+    data.to_csv("data/words_to_learn.csv", index=False)
+    next_card()
 
 #---------------------------- UI SETUP ------------------------------- #
 
@@ -32,7 +49,7 @@ window = Tk()
 window.title("Flash Card - Fransk og Dansk")
 window.config(padx=50, pady=50, bg=BACKGROUND_COLOR)
 
-window.after(3000, func=flip_card)
+flip_timer = window.after(3000, func=flip_card)
 
 #images/canvas
 canvas = Canvas(width=800, height=526)
@@ -53,7 +70,7 @@ wrong_button.grid(column=0, row=1)
 
 check_image = PhotoImage(file="images/right.png")
 right_button = Button(image=check_image)
-right_button.config(bg = BACKGROUND_COLOR, highlightthickness=0, command=next_card)
+right_button.config(bg = BACKGROUND_COLOR, highlightthickness=0, command=is_known)
 right_button.grid(column=1, row=1)
 
 next_card()
